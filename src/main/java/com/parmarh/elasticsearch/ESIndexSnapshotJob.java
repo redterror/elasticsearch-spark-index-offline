@@ -58,7 +58,6 @@ public class ESIndexSnapshotJob implements Serializable {
 		sc = new JavaSparkContext(sparkConf);
 		sc.setCheckpointDir(tempDir + "/checkpoint/");
 		routes = EsUtils.getRoutes(numOfPartitions);
-
 	}
 
 	static final class ConfigSupplier implements Supplier<Configuration>, Serializable {
@@ -162,9 +161,9 @@ public class ESIndexSnapshotJob implements Serializable {
 
 		String indexType = args[5];
 
-		String snapWorkingBase = "/media/ephemeral0/tmp/bulkload1/";
+		String snapWorkingBase = "/tmp/bulkload1/";
 
-		String esWorkingBaseDir = "/media/ephemeral0/tmp/esrawdata1/";
+		String esWorkingBaseDir = "/tmp/esrawdata1/";
 
 		ESIndexSnapshotJob job = new ESIndexSnapshotJob();
 
