@@ -78,7 +78,7 @@
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_2.10</artifactId>
-      <version>1.5.1</version>
+      <version>2.2.0</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
@@ -90,12 +90,8 @@
           <groupId>org.apache.avro</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>chill_2.10</artifactId>
-          <groupId>com.twitter</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>chill-java</artifactId>
-          <groupId>com.twitter</groupId>
+          <artifactId>xbean-asm5-shaded</artifactId>
+          <groupId>org.apache.xbean</groupId>
         </exclusion>
         <exclusion>
           <artifactId>spark-launcher_2.10</artifactId>
@@ -108,10 +104,6 @@
         <exclusion>
           <artifactId>spark-network-shuffle_2.10</artifactId>
           <groupId>org.apache.spark</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>javax.servlet</artifactId>
-          <groupId>org.eclipse.jetty.orbit</groupId>
         </exclusion>
         <exclusion>
           <artifactId>jul-to-slf4j</artifactId>
@@ -134,20 +126,28 @@
           <groupId>org.roaringbitmap</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>akka-remote_2.10</artifactId>
-          <groupId>com.typesafe.akka</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>akka-slf4j_2.10</artifactId>
-          <groupId>com.typesafe.akka</groupId>
-        </exclusion>
-        <exclusion>
           <artifactId>json4s-jackson_2.10</artifactId>
           <groupId>org.json4s</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>mesos</artifactId>
-          <groupId>org.apache.mesos</groupId>
+          <artifactId>jersey-client</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-common</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-server</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-container-servlet</artifactId>
+          <groupId>org.glassfish.jersey.containers</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-container-servlet-core</artifactId>
+          <groupId>org.glassfish.jersey.containers</groupId>
         </exclusion>
         <exclusion>
           <artifactId>netty-all</artifactId>
@@ -182,16 +182,16 @@
           <groupId>oro</groupId>
         </exclusion>
         <exclusion>
-          <artifactId>tachyon-client</artifactId>
-          <groupId>org.tachyonproject</groupId>
-        </exclusion>
-        <exclusion>
           <artifactId>pyrolite</artifactId>
           <groupId>net.razorvine</groupId>
         </exclusion>
         <exclusion>
           <artifactId>py4j</artifactId>
           <groupId>net.sf.py4j</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>commons-crypto</artifactId>
+          <groupId>org.apache.commons</groupId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -309,18 +309,18 @@
     </dependency>
   </dependencies>
   <properties>
-    <hadoop.client.version>2.7.0</hadoop.client.version>
-    <spark.testing.base.version>2.2.0_0.8.0</spark.testing.base.version>
-    <joda.version>2.3</joda.version>
-    <surefire.version>2.7.2</surefire.version>
-    <junit.version>4.11</junit.version>
-    <java-version>1.7</java-version>
-    <gson.version>2.2.2</gson.version>
-    <es.version>1.6.0</es.version>
-    <log4j.version>1.2.17</log4j.version>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.io.tmpdir>/tmp</java.io.tmpdir>
-    <spark.version>1.5.1</spark.version>
+    <java-version>1.7</java-version>
+    <surefire.version>2.7.2</surefire.version>
+    <joda.version>2.3</joda.version>
+    <spark.version>2.2.0</spark.version>
+    <gson.version>2.2.2</gson.version>
+    <hadoop.client.version>2.7.0</hadoop.client.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <log4j.version>1.2.17</log4j.version>
+    <junit.version>4.11</junit.version>
+    <es.version>1.6.0</es.version>
+    <spark.testing.base.version>2.2.0_0.8.0</spark.testing.base.version>
   </properties>
 </project>
 
