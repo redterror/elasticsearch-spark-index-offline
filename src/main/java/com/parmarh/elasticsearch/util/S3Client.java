@@ -13,9 +13,7 @@ import java.io.InputStreamReader;
 
 public class S3Client {
 
-    private static AmazonS3 s3Client =   AmazonS3ClientBuilder.standard()
-            .withRegion("us-east-1")
-            .build();
+    private static AmazonS3 s3Client =   AmazonS3ClientBuilder.standard().build();
 
     public static String readFile(String s3Url) throws IOException {
         AmazonS3URI s3URI = new AmazonS3URI(s3Url);
