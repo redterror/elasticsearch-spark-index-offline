@@ -4,7 +4,7 @@ import org.apache.spark.Partitioner;
 
 import java.util.HashMap;
 
-public class ElasticSearchPartitioner extends Partitioner{
+public class ElasticSearchPartitioner extends Partitioner {
 
     int numPatitions = 0;
     private HashMap<String, Integer> routes;
@@ -22,8 +22,8 @@ public class ElasticSearchPartitioner extends Partitioner{
 
     @Override
     public int getPartition(Object key) {
-        if ( numPatitions == 0 ) return 0;
-        return routes.get( key );
+        if (numPatitions == 0) return 0;
+        return routes.get(key);
 
     }
 }
