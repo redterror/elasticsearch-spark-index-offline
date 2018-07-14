@@ -11,8 +11,8 @@ public class ElasticSearchPartitioner extends Partitioner {
 
     public ElasticSearchPartitioner(int numPatitions) {
         this.numPatitions = numPatitions;
-        routes = EsUtils.getRouteMap(16);
-
+        //routes = EsUtils.getRouteMap(16);
+        routes = EsUtils.getRouteMap(numPatitions);
     }
 
     @Override
@@ -24,6 +24,5 @@ public class ElasticSearchPartitioner extends Partitioner {
     public int getPartition(Object key) {
         if (numPatitions == 0) return 0;
         return routes.get(key);
-
     }
 }

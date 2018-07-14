@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import com.parmarh.elasticsearch.util.ElasticSearchPartitioner;
 import com.parmarh.elasticsearch.util.EsUtils;
 import com.parmarh.elasticsearch.util.S3Client;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.SparkConf;
@@ -101,7 +102,7 @@ public class ESIndexSnapshotJob implements Serializable {
 
         String templateJson = S3Client.readFile(templateJsonPath);
 
-        Map<String, String> additionalEsSettings = new HashMap<>();
+        Map<String, String> additionalEsSettings = new HashMap<String, String> ();
 
         ESFilesTransport transport = new ESFilesTransport();
 
@@ -157,9 +158,10 @@ public class ESIndexSnapshotJob implements Serializable {
 
         FileUtils.deleteQuietly(tempDir);
 
+        System.out.println("####################################### DONE ##########################################");
+
         System.out.println("Everything took: " + TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - start)
                 + " secs");
-
     }
 
     static final class ConfigSupplier implements Supplier<Configuration>, Serializable {

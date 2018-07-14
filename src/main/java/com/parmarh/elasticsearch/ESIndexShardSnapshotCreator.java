@@ -1,10 +1,9 @@
 package com.parmarh.elasticsearch;
 
+import com.google.common.base.Joiner;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.elasticsearch.action.ActionFuture;
-import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.cluster.snapshots.create.CreateSnapshotResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
@@ -14,16 +13,11 @@ import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
-import org.elasticsearch.common.base.Joiner;
-import org.elasticsearch.common.collect.Lists;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.util.concurrent.ListenableFuture;
-import org.elasticsearch.common.util.concurrent.SettableFuture;
 import org.elasticsearch.hadoop.cfg.PropertiesSettings;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.plugins.PluginsService;
+import org.elasticsearch.node.NodeValidationException;
 import org.elasticsearch.snapshots.SnapshotInfo;
 import org.elasticsearch.spark.serialization.ScalaValueWriter;
 import org.slf4j.LoggerFactory;
@@ -34,9 +28,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-
-import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
-import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
 public class ESIndexShardSnapshotCreator implements Serializable {
     public static final String SNAPSHOT_NAME_PREFIX = "snapshot";
@@ -80,22 +71,6 @@ public class ESIndexShardSnapshotCreator implements Serializable {
         this.numOfPartitions = numOfPartitions;
     }
 
-    public final static <T> ListenableFuture<T> esListenableToGuavaListenable(ListenableActionFuture<T> listenableActionFuture) {
-        final SettableFuture<T> result = SettableFuture.create();
-        listenableActionFuture.addListener(new ActionListener<T>() {
-            @Override
-            public void onResponse(T response) {
-                result.set(response);
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                result.setException(e);
-            }
-        });
-        return result;
-    }
-
     public String getSnapshotDestination() {
         return snapshotDestination;
     }
@@ -107,7 +82,7 @@ public class ESIndexShardSnapshotCreator implements Serializable {
             int bulkSize,
             String indexType,
             Iterator<Tuple2<K, V>> docs,
-            long timeout) throws IOException {
+            long timeout) throws IOException, NodeValidationException {
         createSnapshotAndMoveToDest(fs, indexName, partition, numOfPartitions,
                 bulkSize, indexType, docs, timeout, true);
     }
@@ -121,7 +96,7 @@ public class ESIndexShardSnapshotCreator implements Serializable {
             String indexType,
             Iterator<Tuple2<K, V>> docs,
             long timeout,
-            boolean isShard) throws IOException {
+            boolean isShard) throws IOException, NodeValidationException {
         log.info("Creating snapshot of shard for index " + indexName + "[" + partition + "]");
         String snapshotWorkingLocation = Joiner.on("/").join(snapshoLocationBase,
                 snapshotRepoName, indexName, partition);
@@ -154,7 +129,7 @@ public class ESIndexShardSnapshotCreator implements Serializable {
 
             BulkRequestBuilder bulkRequest = node.client().prepareBulk();
 
-            List<BulkRequestBuilder> bulkList = Lists.newArrayList();
+            List<BulkRequestBuilder> bulkList = new ArrayList<>();
 
             while (docs.hasNext()) {
                 Tuple2<K, V> id2doc = docs.next();
@@ -201,7 +176,9 @@ public class ESIndexShardSnapshotCreator implements Serializable {
             node.client().admin().indices().prepareFlush(indexName).get();
 
             log.info("Optimizing " + indexName + "[" + partition + "]");
-            node.client().admin().indices().prepareOptimize(indexName).get();
+            node.client().admin().indices()
+                    //.prepareOptimize(indexName)
+                     .prepareGetIndex();
 
             log.info("Waiting for yellow " + indexName + "[" + partition + "]");
             node.client().admin().cluster().health(new ClusterHealthRequest()
@@ -273,7 +250,7 @@ public class ESIndexShardSnapshotCreator implements Serializable {
                 + numShardsPerIndex + " number of shards");
 
 
-        node.client().admin().indices().prepareCreate(indexName).setSettings(settingsBuilder()
+        node.client().admin().indices().prepareCreate(indexName).setSettings( Settings.builder()
                 .put("index.number_of_replicas", 0)
                 .put(IndexMetaData.SETTING_NUMBER_OF_SHARDS, numShardsPerIndex)
         ).get();
@@ -281,14 +258,14 @@ public class ESIndexShardSnapshotCreator implements Serializable {
     }
 
     private Node instantiateNode(String nodeName, int numShardsPerIndex, String esWorkingDir,
-                                 String snapshotWorkingLocation, String clusterName) {
+                                 String snapshotWorkingLocation, String clusterName) throws NodeValidationException {
 
-        org.elasticsearch.common.settings.ImmutableSettings.Builder settingBuilder = ImmutableSettings.builder()
+        Settings.Builder settingBuilder = Settings.builder()
                 .put("http.enabled", false) // Disable HTTP transport, we'll communicate inner-jvm
                 .put("processors", 1) // We could experiment ramping this up to match # cores - num reducers per node
                 .put("node.name", nodeName)
                 .put("path.data", esWorkingDir)
-                .put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true) // Allow plugins if they're bundled in with the uuberjar
+                //.put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true) // Allow plugins if they're bundled in with the uuberjar
                 .put("index.refresh_interval", -1)
                 .put("index.translog.flush_threshold_size", flushSizeInMb) // Aggressive flushing helps keep the memory footprint below the yarn container max. TODO: Make configurable
                 .put("bootstrap.mlockall", true)
@@ -305,27 +282,40 @@ public class ESIndexShardSnapshotCreator implements Serializable {
                 .put("index.compound_format", false) // Explicitly disable compound files
                 //.put("index.codec", "best_compression") // Lucene 5/ES 2.0 feature to play with when that's out
                 .put("indices.fielddata.cache.size", "0%");
-        ///.put("index.store.type", "memory");
+                ///.put("index.store.type", "memory");
 
 
-        settingBuilder.put(additionalEsSettings);
+        additionalEsSettings.forEach((key, value) -> settingBuilder.put(key, value));
+        //settingBuilder.put(additionalEsSettings);
 
         Settings nodeSettings = settingBuilder.build();
 
-
         // Create the node
-        Node node = nodeBuilder()
-                .client(false) // It's a client + data node
-                .local(true) // Tell ES cluster discovery to be inner-jvm only,
+
+        Node node = new Node(nodeSettings);
+                //.client(false) // It's a client + data node
+                //.local(true) // Tell ES cluster discovery to be inner-jvm only,
                 // disable HTTP based node discovery
-                .clusterName(clusterName)
-                .settings(nodeSettings)
-                .build();
+                //.clusterName(clusterName)
+                //.settings(nodeSettings)
+                //.build();
+
+//        Node node = nodebuilder()
+//                .client(false) // It's a client + data node
+//                .local(true) // Tell ES cluster discovery to be inner-jvm only,
+//                // disable HTTP based node discovery
+//                .clusterName(clusterName)
+//                .settings(nodeSettings)
+//                .build();
 
         node.start();
 
-        node.client().admin().indices()
-                .preparePutTemplate(templateName).setSource(templateJson).get();
+        node.client()
+            .admin()
+            .indices()
+            .preparePutTemplate(templateName)
+            //.setSource(this.templateJson)
+            .get();
 
         return node;
     }
@@ -362,7 +352,7 @@ public class ESIndexShardSnapshotCreator implements Serializable {
             String indexName,
             int numShardsPerIndex,
             String indexType,
-            long timeout) throws IOException {
+            long timeout) throws IOException, NodeValidationException {
         Iterator<Tuple2<K, V>> docs = new ArrayList<Tuple2<K, V>>().iterator();
         createSnapshotAndMoveToDest(fs, indexName, numShardsPerIndex, numShardsPerIndex, 0, indexType, docs,
                 timeout, false);
